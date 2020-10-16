@@ -63,6 +63,9 @@ float* vectorToArray(std::vector<float> &vals, int N) {
 
 float findAverageArray(float array[], int size)
 {
+    // avg = a.mean(axis)
+    // scl = avg.dtype.type(a.size/avg.size)
+
     float sum;
 
     for (int i = 0; i < size; i++)
