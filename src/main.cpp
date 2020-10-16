@@ -61,22 +61,7 @@ float* vectorToArray(std::vector<float> &vals, int N) {
     return temp;
 }
 
-float findAverageArray(float array[], int size)
-{
-    // avg = a.mean(axis)
-    // scl = avg.dtype.type(a.size/avg.size)
-
-    float sum;
-
-    for (int i = 0; i < size; i++)
-    {
-        sum += array[i];
-    }
-
-    return sum / size;
-}
-
-float* calculateSIS(float** data, int size)
+std::vector<float> calculateSIS(float** data, int size)
 {
     std::vector<float> sisArray;
 
@@ -91,16 +76,19 @@ float* calculateSIS(float** data, int size)
         }
     }
 
-    return vectorToArray(sisArray, sisArray.size());
+    return sisArray;
 }
 
-// TODO findAverageArray not working.
 float calculateSISValue(float* data, int size)
 {
-//    SIS_Value = np.average(SIS_Array)
+    float sum = 0;
 
+    for (int i = 0; i < size; i++)
+    {
+        sum += data[i];
+    }
 
-    return findAverageArray(data, size);
+    return sum / size;
 }
 
 void calculateSISNorm()
@@ -130,14 +118,9 @@ int main(int argc, char* args[])
 
     printf("Calculating SIS Values...\n");
 
-    float* sis = calculateSIS(dataArray, size);
+    std::vector<float> sis = calculateSIS(dataArray, size);
 
-    for (int i = 0; i < size; i++)
-    {
-        printf("&f", sis[i]);
-    }
-
-    float sisValue = calculateSISValue(sis, size);
+    float sisValue = calculateSISValue(vectorToArray(sis, sis.size()), sis.size());
 
     printf("sisValue: %f", sisValue);
 }
