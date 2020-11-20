@@ -2,6 +2,9 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
+#include <chrono>
+
+#include "utils.h"
 
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
@@ -10,6 +13,14 @@
 #endif
 
 #define MAX_SOURCE_SIZE (0x100000)
+
+#define NUM_IONS 10000
+#define FILE_NAME "/Users/tylerjaacks/Documents/Projects/Class Projects/TestData/ISUSummedData.csv"
+
+void initializeOpenCL()
+{
+    cl_mem d_A;
+}
 
 std::vector<std::vector<float>> readSISCSVToVector(std::string fileName)
 {
@@ -29,43 +40,11 @@ std::vector<std::vector<float>> readSISCSVToVector(std::string fileName)
     return array;
 }
 
-float** multiDimensionalVectorToArray(std::vector<std::vector<float>> &vals, int N, int M)
-{
-    float** temp;
-
-    temp = new float*[N];
-
-    for(unsigned i=0; (i < N); i++)
-    {
-        temp[i] = new float[M];
-
-        for(unsigned j=0; (j < M); j++)
-        {
-            temp[i][j] = vals[i][j];
-        }
-    }
-
-    return temp;
-}
-
-float* vectorToArray(std::vector<float> &vals, int N) {
-    float* temp;
-
-    temp = new float[N];
-
-    for (unsigned i = 0; i < N; i++)
-    {
-        temp[i] = vals[i];
-    }
-
-    return temp;
-}
-
-std::vector<float> calculateSIS(float** data, int size)
+std::vector<float> calculateSIS(std::vector<std::vector<float>> data)
 {
     std::vector<float> sisArray;
 
-    for (int i = 1; i < size; i++)
+    for (int i = 1; i < data.size(); i++)
     {
         for (int j = 0; j < (int) data[i][1]; j++)
         {
@@ -79,7 +58,7 @@ std::vector<float> calculateSIS(float** data, int size)
     return sisArray;
 }
 
-float calculateSISValue(float* data, int size)
+float calculateSISValue(std::vector<float> data, int size)
 {
     float sum = 0;
 
@@ -91,36 +70,84 @@ float calculateSISValue(float* data, int size)
     return sum / size;
 }
 
-void calculateSISNorm()
+std::vector<float> calculateSISNorm(std::vector<float> sisArray, float sisValue)
 {
-//    SIS_Array_Norm = np.true_divide(SIS_Array, SIS_Value)
+    return vectorDivision(sisArray, sisValue);
 }
 
-// TODO This code should run with OpenCL in the future.
-void calculateMonteCarlo(float countRate[])
+std::vector<std::vector<int>> calculateMonteCarlo(std::vector<std::vector<int>> cmpdArray, std::vector<float> sisNormalized)
 {
+    auto newVector = std::vector<std::vector<int>>();
+    auto count = 0;
 
+    for (auto& it : cmpdArray)
+    {
+        auto tmpVector = std::vector<int>();
+
+        for (int i = 0; i < it.size(); i++)
+        {
+            std::cout << "Monte Carlo Simulation: " << count << std::endl;
+
+            auto poissonChoice = randomChoice(sisNormalized, it[i]);
+            auto sum = vectorSum(poissonChoice);
+
+            tmpVector.push_back(sum);
+            count++;
+        }
+
+        newVector.push_back(tmpVector);
+    }
+
+    return newVector;
 }
 
 int main(int argc, char* args[])
 {
     printf("Reading from SIS CSV file...\n");
 
-    // TODO Load this from the command line arguments.
-    std::string fileName = "/Users/tylerjaacks/Desktop/TestData/ISUSummedData.csv";
+    // TODO Load these from the command line arguments.
+    int numIons = NUM_IONS;
+    std::string fileName = FILE_NAME;
 
-    // TODO Make this is one operation i.e .CSV -> float** or float[][].
     std::vector<std::vector<float>> data = readSISCSVToVector(fileName);
-    int size = data.size();
-    float** dataArray = multiDimensionalVectorToArray(data, data.size(), 2);
 
-    printf("Done Reading from SIS.\n");
+    printf("Calculating SIS Array...\n");
+
+    std::vector<float> sis = calculateSIS(data);
 
     printf("Calculating SIS Values...\n");
 
-    std::vector<float> sis = calculateSIS(dataArray, size);
+    float sisValue = calculateSISValue(sis, sis.size());
 
-    float sisValue = calculateSISValue(vectorToArray(sis, sis.size()), sis.size());
+    printf("Calculating SIS Norm...\n");
 
-    printf("sisValue: %f", sisValue);
+    std::chrono::time_point<std::chrono::steady_clock> start1 = std::chrono::steady_clock::now();
+
+    auto sisArrayNorm = calculateSISNorm(sis, sisValue);
+
+    std::chrono::time_point<std::chrono::steady_clock> end1 = std::chrono::steady_clock::now();
+    std::chrono::milliseconds diff1 = duration_cast<std::chrono::milliseconds>(end1 - start1);
+
+    std::cout << "It took " << diff1.count() / 60000.0f << "s" << " to run the Monte Carlo simulation." << std::endl;
+
+    auto sqRtCtRateArray = linspace(0.5, 5, 50);
+    auto ctRateArray = vectorSquared(sqRtCtRateArray);
+
+    // TODO I think this is wrong.
+    std::vector<std::vector<int>> cmpdArray = poissonDistFromVector(ctRateArray, NUM_IONS);
+
+    transpose(cmpdArray);
+
+    std::chrono::time_point<std::chrono::steady_clock> start2 = std::chrono::steady_clock::now();
+
+    std::vector<std::vector<int>> tmp = calculateMonteCarlo(cmpdArray, sisArrayNorm);
+
+    std::chrono::time_point<std::chrono::steady_clock> end2 = std::chrono::steady_clock::now();
+    std::chrono::milliseconds diff2 = duration_cast<std::chrono::milliseconds>(end2 - start2);
+
+    std::cout << "It took " << diff2.count() / 60000.0f << "s" << " to run the Monte Carlo simulation." << std::endl;
+
+    printf("Initializing OpenCL...\n");
+
+    initializeOpenCL();
 }
