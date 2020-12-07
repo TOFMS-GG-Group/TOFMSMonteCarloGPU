@@ -80,17 +80,22 @@ std::vector<std::vector<int>> calculateMonteCarlo(std::vector<std::vector<int>> 
     auto newVector = std::vector<std::vector<int>>();
     auto count = 0;
 
+    // Iterate over element (Which is another vector) the compound array.
     for (auto& it : cmpdArray)
     {
         auto tmpVector = std::vector<int>();
 
+        // Iterate over all the elements in that vector.
         for (int i = 0; i < it.size(); i++)
         {
             std::cout << "Monte Carlo Simulation: " << count << std::endl;
 
+            // Create a vector of Poisson random choices from the normalized single ion single and the currently element of the vector.
             auto poissonChoice = randomChoice(sisNormalized, it[i]);
+            // Sum the poisson choice vector.
             auto sum = vectorSum(poissonChoice);
 
+            // Add the vector to the result.
             tmpVector.push_back(sum);
             count++;
         }
